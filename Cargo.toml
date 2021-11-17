@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 clap = "~2.33.0"
 lazy_static = "1.4.0"
+itertools = "0.10.1"
