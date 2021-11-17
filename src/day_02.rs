@@ -7,17 +7,17 @@ fn part_2() -> i64 {
 }
 
 pub fn solve() {
-    println!("Day 02, Part 1: {}", part_1());
-    println!("Day 02, Part 2: {}", part_2());
+    println!("Part 1: {}", part_1());
+    println!("Part 2: {}", part_2());
 }
 
 #[cfg(test)]
-mod day_01_tests {
+mod tests {
     use super::*;
 
     #[test]
-    fn day_02_part_1_examples() {}
+    fn part_1_examples() {}
 
     #[test]
-    fn day_02_part_2_examples() {}
+    fn part_2_examples() {}
 }
