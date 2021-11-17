@@ -51,14 +51,18 @@ lazy_static! {
 
 fn run_solver(day: &str) {
     if let Some(solver) = SOLVERS.get(day) {
-        println!("== Day {} =====", day);
+        println!("★★ Day {} ★★★★★", day);
         println!(
-            "== https://adventofcode.com/2021/day/{}",
+            "★ https://adventofcode.com/2021/day/{}",
             day.trim_start_matches('0')
         );
+
         let before = Instant::now();
+
         solver();
-        println!("Elapsed time: {:.2?}", before.elapsed());
+
+        println!("★ Elapsed time: {:.2?}", before.elapsed());
+        println!("★★★★★★★★★★★★★★★");
     } else {
         println!("Unknown day: {}", day);
         exit(1)
