@@ -4,6 +4,7 @@ extern crate lazy_static;
 use std::collections::HashMap;
 use std::error::Error;
 use std::process::exit;
+use std::time::Instant;
 
 use clap::{App, Arg};
 use itertools::Itertools;
@@ -55,7 +56,9 @@ fn run_solver(day: &str) {
             "== https://adventofcode.com/2021/day/{}",
             day.trim_start_matches('0')
         );
+        let before = Instant::now();
         solver();
+        println!("Elapsed time: {:.2?}", before.elapsed());
     } else {
         println!("Unknown day: {}", day);
         exit(1)
