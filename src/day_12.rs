@@ -1,8 +1,8 @@
-fn part_1() -> i64 {
+fn part_1() -> isize {
     -1
 }
 
-fn part_2() -> i64 {
+fn part_2() -> isize {
     -1
 }
 
@@ -13,8 +13,6 @@ pub fn solve() {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     fn part_1_examples() {}
 
