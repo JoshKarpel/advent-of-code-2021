@@ -6,22 +6,22 @@ use std::str::FromStr;
 
 use num::Integer;
 
-fn part_1(commands: &[Instruction<usize>]) -> usize {
+fn part_1<N: Integer + Copy>(commands: &[Instruction<N>]) -> N {
     commands
         .iter()
         .fold(Array1::zeros(2), |position, command| match command {
-            Instruction::Forward(distance) => position.add(array![*distance, 0]),
-            Instruction::Down(distance) => position.add(array![0, *distance]),
-            Instruction::Up(distance) => position.sub(array![0, *distance]),
+            Instruction::Forward(distance) => position.add(array![*distance, N::zero()]),
+            Instruction::Down(distance) => position.add(array![N::zero(), *distance]),
+            Instruction::Up(distance) => position.sub(array![N::zero(), *distance]),
         })
         .product()
 }
 
-fn part_2(commands: &[Instruction<usize>]) -> usize {
+fn part_2<N: Integer + Copy>(commands: &[Instruction<N>]) -> N {
     commands
         .iter()
         .fold(
-            (Array1::zeros(2), 0),
+            (Array1::zeros(2), N::zero()),
             |(position, aim), command| match command {
                 Instruction::Forward(n) => (position.add(array![*n, aim * *n]), aim),
                 Instruction::Down(n) => (position, aim + *n),
