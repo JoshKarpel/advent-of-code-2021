@@ -1,25 +1,22 @@
-use std::fs::read_to_string;
+use num::Integer;
+use std::iter::Sum;
 
-fn part_1(depths: &[usize]) -> usize {
-    depths
-        .windows(2)
-        .filter(|window| window[0] < window[1])
-        .count()
+fn part_1<N: Integer>(depths: &[N]) -> usize {
+    depths.array_windows().filter(|[a, b]| a < b).count()
 }
 
-fn part_2(depths: &[usize]) -> usize {
+fn part_2<'n, N: Integer + Sum<&'n N>>(depths: &'n [N]) -> usize {
     depths
         .windows(3)
         .map(|window| window.iter().sum())
-        .collect::<Vec<usize>>()
-        .windows(2)
-        .filter(|window| window[0] < window[1])
+        .collect::<Vec<N>>()
+        .array_windows()
+        .filter(|[a, b]| a < b)
         .count()
 }
 
 pub fn solve() {
-    let depths: Vec<usize> = read_to_string("data/day_01.txt")
-        .unwrap()
+    let depths: Vec<usize> = include_str!("../data/day_01.txt")
         .lines()
         .map(|line| line.parse().unwrap())
         .collect();
