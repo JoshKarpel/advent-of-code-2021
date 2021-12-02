@@ -7,13 +7,12 @@ fn part_1<N: Integer>(depths: &[N]) -> usize {
 }
 
 fn part_2<'n, N: Integer + Sum<&'n N>>(depths: &'n [N]) -> usize {
-    depths
-        .windows(3)
-        .map(|window| window.iter().sum())
-        .collect::<Vec<N>>()
-        .array_windows()
-        .filter(|[a, b]| a < b)
-        .count()
+    part_1(
+        &depths
+            .windows(3)
+            .map(|window| window.iter().sum())
+            .collect::<Vec<N>>(),
+    )
 }
 
 pub fn solve() {
