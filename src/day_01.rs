@@ -1,4 +1,5 @@
 use num::Integer;
+use std::fs::read_to_string;
 use std::iter::Sum;
 
 fn part_1<N: Integer>(depths: &[N]) -> usize {
@@ -16,7 +17,8 @@ fn part_2<'n, N: Integer + Sum<&'n N>>(depths: &'n [N]) -> usize {
 }
 
 pub fn solve() {
-    let depths: Vec<usize> = include_str!("../data/day_01.txt")
+    let depths: Vec<usize> = read_to_string("data/day_01.txt")
+        .unwrap()
         .lines()
         .map(|line| line.parse().unwrap())
         .collect();
