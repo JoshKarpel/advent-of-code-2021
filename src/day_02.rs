@@ -1,5 +1,4 @@
 use std::error::Error;
-use std::fmt::Debug;
 use std::fs::read_to_string;
 use std::ops::{AddAssign, SubAssign};
 use std::str::FromStr;
@@ -53,23 +52,20 @@ enum Instruction<N: Integer> {
     Up(N),
 }
 
-impl<N: Integer + FromStr> FromStr for Instruction<N>
-where
-    <N as FromStr>::Err: Debug,
-{
+impl<N: Integer + FromStr> FromStr for Instruction<N> {
     type Err = Box<dyn Error>;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (dir, dist) = s.split_once(' ').unwrap();
+        let (dir, dist) = s.split_once(' ').ok_or("Instruction was missing a space")?;
 
-        let distance = dist.parse().unwrap();
+        let distance = dist.parse().map_err(|_e| "Distance couldn't be parsed")?;
 
-        Ok(match dir {
-            "forward" => Instruction::Forward(distance),
-            "down" => Instruction::Down(distance),
-            "up" => Instruction::Up(distance),
-            _ => panic!("unrecognized direction"),
-        })
+        match dir {
+            "forward" => Ok(Instruction::Forward(distance)),
+            "down" => Ok(Instruction::Down(distance)),
+            "up" => Ok(Instruction::Up(distance)),
+            _ => Err("unrecognized direction".into()),
+        }
     }
 }
 
