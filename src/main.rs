@@ -2,12 +2,17 @@
 extern crate lazy_static;
 
 use std::collections::HashMap;
+use std::env;
 use std::error::Error;
+use std::fs::{create_dir_all, File};
+use std::io::Write;
 use std::process::exit;
 use std::time::Instant;
 
 use clap::{App, Arg};
 use itertools::Itertools;
+use reqwest::blocking::Client;
+use reqwest::header::{HeaderMap, COOKIE};
 
 use advent_of_code_2021::{
     day_01, day_02, day_03, day_04, day_05, day_06, day_07, day_08, day_09, day_10, day_11, day_12,
@@ -69,11 +74,52 @@ fn run_solver(day: &str) {
     }
 }
 
+fn download_input(day: &str) -> Result<(), Box<dyn Error>> {
+    dotenv::dotenv().ok();
+
+    let session = env::var("AOC_SESSION").unwrap();
+
+    create_dir_all("data")?;
+    let mut file = File::options()
+        .write(true)
+        .create_new(true)
+        .open(format!("data/day_{}.txt", day))?;
+
+    let mut headers = HeaderMap::new();
+    headers.insert(COOKIE, format!("session={}", session).parse().unwrap());
+
+    let client = Client::new();
+    let response = client
+        .get(format!(
+            "https://adventofcode.com/2021/day/{}/input",
+            day.trim_start_matches('0')
+        ))
+        .headers(headers)
+        .send()?
+        .error_for_status()?;
+    let input = response.text()?;
+
+    println!("Got input for day {}:\n{}", day, input);
+
+    file.write_all(input.as_bytes())?;
+
+    Ok(())
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     let matches = App::new("Advent of Code 2021")
         .version("0.1.0")
         .author("Josh Karpel <josh.karpel@gmail.com>")
         .about("Josh's solutions for Advent of Code 2021.")
+        .subcommand(
+            App::new("get-input")
+                .help("Download data for a given day.")
+                .arg(
+                    Arg::with_name("DAY")
+                        .help("The day to download the input for.")
+                        .index(1),
+                ),
+        )
         .arg(
             Arg::with_name("DAY")
                 .help("The day to run the solver for.")
@@ -81,14 +127,23 @@ fn main() -> Result<(), Box<dyn Error>> {
         )
         .get_matches();
 
-    if let Some(day) = matches.value_of("DAY").map(|d| format!("{:0>2}", d)) {
-        run_solver(&day)
+    if let Some(matches) = matches.subcommand_matches("get-input") {
+        if let Some(day) = matches.value_of("DAY").map(|d| format!("{:0>2}", d)) {
+            download_input(&day)?;
+        } else {
+            SOLVERS
+                .keys()
+                .sorted()
+                .try_for_each(|day| download_input(day))?
+        };
+    } else if let Some(day) = matches.value_of("DAY").map(|d| format!("{:0>2}", d)) {
+        run_solver(&day);
     } else {
         SOLVERS.keys().sorted().for_each(|day| {
             run_solver(day);
             println!();
         })
-    }
+    };
 
     Ok(())
 }
