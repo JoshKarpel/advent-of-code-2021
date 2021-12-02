@@ -1,38 +1,35 @@
+use ndarray::{array, Array1};
 use std::error::Error;
 use std::fs::read_to_string;
-use std::ops::{AddAssign, SubAssign};
+use std::ops::{Add, Sub};
 use std::str::FromStr;
 
 use num::Integer;
 
-fn part_1<N: Integer + AddAssign + SubAssign + Copy>(commands: &[Instruction<N>]) -> N {
-    let mut h = N::zero();
-    let mut d = N::zero();
-
-    commands.iter().for_each(|command| match command {
-        Instruction::Forward(n) => h += *n,
-        Instruction::Down(n) => d += *n,
-        Instruction::Up(n) => d -= *n,
-    });
-
-    h * d
+fn part_1(commands: &[Instruction<usize>]) -> usize {
+    commands
+        .iter()
+        .fold(Array1::zeros(2), |position, command| match command {
+            Instruction::Forward(distance) => position.add(array![*distance, 0]),
+            Instruction::Down(distance) => position.add(array![0, *distance]),
+            Instruction::Up(distance) => position.sub(array![0, *distance]),
+        })
+        .product()
 }
 
-fn part_2<N: Integer + AddAssign + SubAssign + Copy>(commands: &[Instruction<N>]) -> N {
-    let mut h = N::zero();
-    let mut d = N::zero();
-    let mut aim = N::zero();
-
-    commands.iter().for_each(|command| match command {
-        Instruction::Forward(n) => {
-            h += *n;
-            d += aim * *n;
-        }
-        Instruction::Down(n) => aim += *n,
-        Instruction::Up(n) => aim -= *n,
-    });
-
-    h * d
+fn part_2(commands: &[Instruction<usize>]) -> usize {
+    commands
+        .iter()
+        .fold(
+            (Array1::zeros(2), 0),
+            |(position, aim), command| match command {
+                Instruction::Forward(n) => (position.add(array![*n, aim * *n]), aim),
+                Instruction::Down(n) => (position, aim + *n),
+                Instruction::Up(n) => (position, aim - *n),
+            },
+        )
+        .0
+        .product()
 }
 
 pub fn solve() {
