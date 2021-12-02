@@ -9,19 +9,12 @@ use num::Num;
 fn part_1<N: Num + Copy>(commands: &[Command<N>]) -> N {
     commands
         .iter()
-        .fold(Array1::zeros(2), |position, command| match command {
-            Command {
-                direction: Direction::Forward,
-                distance,
-            } => position.add(array![*distance, N::zero()]),
-            Command {
-                direction: Direction::Down,
-                distance,
-            } => position.add(array![N::zero(), *distance]),
-            Command {
-                direction: Direction::Up,
-                distance,
-            } => position.sub(array![N::zero(), *distance]),
+        .fold(Array1::zeros(2), |position, command| {
+            match &command.direction {
+                Direction::Forward => position.add(array![command.distance, N::zero()]),
+                Direction::Down => position.add(array![N::zero(), command.distance]),
+                Direction::Up => position.sub(array![N::zero(), command.distance]),
+            }
         })
         .product()
 }
@@ -31,19 +24,13 @@ fn part_2<N: Num + Copy>(commands: &[Command<N>]) -> N {
         .iter()
         .fold(
             (Array1::zeros(2), N::zero()),
-            |(position, aim), command| match command {
-                Command {
-                    direction: Direction::Forward,
-                    distance,
-                } => (position.add(array![*distance, aim * *distance]), aim),
-                Command {
-                    direction: Direction::Down,
-                    distance,
-                } => (position, aim + *distance),
-                Command {
-                    direction: Direction::Up,
-                    distance,
-                } => (position, aim - *distance),
+            |(position, aim), command| match &command.direction {
+                Direction::Forward => (
+                    position.add(array![command.distance, aim * command.distance]),
+                    aim,
+                ),
+                Direction::Down => (position, aim + command.distance),
+                Direction::Up => (position, aim - command.distance),
             },
         )
         .0
