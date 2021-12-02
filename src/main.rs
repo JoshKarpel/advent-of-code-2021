@@ -79,12 +79,6 @@ fn download_input(day: &str) -> Result<(), Box<dyn Error>> {
 
     let session = env::var("AOC_SESSION").unwrap();
 
-    create_dir_all("data")?;
-    let mut file = File::options()
-        .write(true)
-        .create_new(true)
-        .open(format!("data/day_{}.txt", day))?;
-
     let mut headers = HeaderMap::new();
     headers.insert(COOKIE, format!("session={}", session).parse().unwrap());
 
@@ -99,9 +93,15 @@ fn download_input(day: &str) -> Result<(), Box<dyn Error>> {
         .error_for_status()?;
     let input = response.text()?;
 
-    println!("Got input for day {}:\n{}", day, input);
-
+    let path = format!("data/day_{}.txt", day);
+    create_dir_all("data")?;
+    let mut file = File::options()
+        .write(true)
+        .create_new(true)
+        .open(path.clone())?;
     file.write_all(input.as_bytes())?;
+
+    println!("Wrote input for day {} to {}", day, path);
 
     Ok(())
 }
