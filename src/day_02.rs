@@ -10,9 +10,18 @@ fn part_1<N: Num + Copy>(commands: &[Command<N>]) -> N {
     commands
         .iter()
         .fold(Array1::zeros(2), |position, command| match command {
-            Command::Forward(distance) => position.add(array![*distance, N::zero()]),
-            Command::Down(distance) => position.add(array![N::zero(), *distance]),
-            Command::Up(distance) => position.sub(array![N::zero(), *distance]),
+            Command {
+                direction: Direction::Forward,
+                distance,
+            } => position.add(array![*distance, N::zero()]),
+            Command {
+                direction: Direction::Down,
+                distance,
+            } => position.add(array![N::zero(), *distance]),
+            Command {
+                direction: Direction::Up,
+                distance,
+            } => position.sub(array![N::zero(), *distance]),
         })
         .product()
 }
@@ -23,9 +32,18 @@ fn part_2<N: Num + Copy>(commands: &[Command<N>]) -> N {
         .fold(
             (Array1::zeros(2), N::zero()),
             |(position, aim), command| match command {
-                Command::Forward(n) => (position.add(array![*n, aim * *n]), aim),
-                Command::Down(n) => (position, aim + *n),
-                Command::Up(n) => (position, aim - *n),
+                Command {
+                    direction: Direction::Forward,
+                    distance,
+                } => (position.add(array![*distance, aim * *distance]), aim),
+                Command {
+                    direction: Direction::Down,
+                    distance,
+                } => (position, aim + *distance),
+                Command {
+                    direction: Direction::Up,
+                    distance,
+                } => (position, aim - *distance),
             },
         )
         .0
@@ -43,10 +61,28 @@ pub fn solve() {
     println!("Part 2: {}", part_2(&commands));
 }
 
-enum Command<N: Num> {
-    Forward(N),
-    Down(N),
-    Up(N),
+enum Direction {
+    Forward,
+    Down,
+    Up,
+}
+
+impl FromStr for Direction {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "forward" => Ok(Direction::Forward),
+            "down" => Ok(Direction::Down),
+            "up" => Ok(Direction::Up),
+            _ => Err(format!("unrecognized direction {}", s)),
+        }
+    }
+}
+
+struct Command<N> {
+    direction: Direction,
+    distance: N,
 }
 
 impl<N: Num + FromStr> FromStr for Command<N> {
@@ -55,14 +91,10 @@ impl<N: Num + FromStr> FromStr for Command<N> {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let (dir, dist) = s.split_once(' ').ok_or("Instruction was missing a space")?;
 
-        let distance = dist.parse().map_err(|_e| "Distance couldn't be parsed")?;
-
-        match dir {
-            "forward" => Ok(Command::Forward(distance)),
-            "down" => Ok(Command::Down(distance)),
-            "up" => Ok(Command::Up(distance)),
-            _ => Err("unrecognized direction".into()),
-        }
+        Ok(Command {
+            direction: Direction::from_str(dir)?,
+            distance: dist.parse().map_err(|_e| "Distance couldn't be parsed")?,
+        })
     }
 }
 
