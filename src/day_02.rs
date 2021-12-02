@@ -4,9 +4,9 @@ use std::fs::read_to_string;
 use std::ops::{Add, Sub};
 use std::str::FromStr;
 
-use num::Integer;
+use num::Num;
 
-fn part_1<N: Integer + Copy>(commands: &[Instruction<N>]) -> N {
+fn part_1<N: Num + Copy>(commands: &[Instruction<N>]) -> N {
     commands
         .iter()
         .fold(Array1::zeros(2), |position, command| match command {
@@ -17,7 +17,7 @@ fn part_1<N: Integer + Copy>(commands: &[Instruction<N>]) -> N {
         .product()
 }
 
-fn part_2<N: Integer + Copy>(commands: &[Instruction<N>]) -> N {
+fn part_2<N: Num + Copy>(commands: &[Instruction<N>]) -> N {
     commands
         .iter()
         .fold(
@@ -43,13 +43,13 @@ pub fn solve() {
     println!("Part 2: {}", part_2(&commands));
 }
 
-enum Instruction<N: Integer> {
+enum Instruction<N: Num> {
     Forward(N),
     Down(N),
     Up(N),
 }
 
-impl<N: Integer + FromStr> FromStr for Instruction<N> {
+impl<N: Num + FromStr> FromStr for Instruction<N> {
     type Err = Box<dyn Error>;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
