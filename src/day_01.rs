@@ -1,14 +1,14 @@
 use crate::utils::SolverResult;
 use itertools::Itertools;
-use num::Integer;
+use num::Num;
 
 use std::fs::read_to_string;
 
-fn part_1<N: Integer>(depths: &[N]) -> usize {
+fn part_1<N: Num + PartialOrd>(depths: &[N]) -> usize {
     depths.array_windows().filter(|[a, b]| a < b).count()
 }
 
-fn part_2<N: Integer + Copy>(depths: &[N]) -> usize {
+fn part_2<N: Num + PartialOrd + Copy>(depths: &[N]) -> usize {
     part_1(
         &depths
             .array_windows()
@@ -20,7 +20,7 @@ fn part_2<N: Integer + Copy>(depths: &[N]) -> usize {
 pub fn solve() -> SolverResult {
     let depths: Vec<usize> = read_to_string("data/day_01.txt")?
         .lines()
-        .map(|line| line.parse())
+        .map(&str::parse)
         .try_collect()?;
 
     println!("Part 1: {}", part_1(&depths));
