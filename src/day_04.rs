@@ -1,42 +1,56 @@
 use crate::utils::SolverResult;
 use ndarray::Array2;
+use std::collections::HashSet;
 use std::fs::read_to_string;
 
 type Board = Array2<usize>;
 
-fn wins(board: &Board, draws: &[usize]) -> Option<usize> {
+fn wins(board: &Board, draw_set: &HashSet<&usize>, last_draw: &usize) -> Option<usize> {
     if board
         .rows()
         .into_iter()
         .chain(board.columns().into_iter())
-        .any(|x| x.into_iter().all(|e| draws.contains(e)))
+        .any(|x| x.into_iter().all(|e| draw_set.contains(e)))
     {
-        Some(score(board, draws))
+        Some(score(board, draw_set, last_draw))
     } else {
         None
     }
 }
 
-fn score(board: &Board, draws: &[usize]) -> usize {
-    board.iter().filter(|x| !draws.contains(x)).sum::<usize>() * draws.last().unwrap()
+fn score(board: &Board, draw_set: &HashSet<&usize>, last_draw: &usize) -> usize {
+    last_draw
+        * board
+            .iter()
+            .filter(|x| !draw_set.contains(x))
+            .sum::<usize>()
 }
 
 fn part_1(draws: &[usize], boards: &[Board]) -> usize {
-    (1..draws.len())
-        .find_map(|d| boards.iter().find_map(|b| wins(b, &draws[..d])))
+    let mut draw_set = HashSet::new();
+
+    draws
+        .iter()
+        .find_map(|last_draw| {
+            draw_set.insert(last_draw);
+            boards.iter().find_map(|b| wins(b, &draw_set, last_draw))
+        })
         .unwrap()
 }
 
 fn part_2(draws: &[usize], boards: &[Board]) -> usize {
+    let mut draw_set = HashSet::new();
     let mut boards = boards.to_vec();
-    (1..draws.len())
-        .find_map(|d| {
-            let current_draws = &draws[..d];
+
+    draws
+        .iter()
+        .find_map(|last_draw| {
+            draw_set.insert(last_draw);
 
             if boards.len() == 1 {
-                wins(&boards[0], current_draws)
+                wins(&boards[0], &draw_set, last_draw)
             } else {
-                boards.retain(|b| wins(b, current_draws).is_none());
+                boards.retain(|b| wins(b, &draw_set, last_draw).is_none());
                 None
             }
         })
