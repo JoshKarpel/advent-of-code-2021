@@ -1,4 +1,5 @@
 use crate::utils::SolverResult;
+use itertools::Itertools;
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::collections::HashMap;
@@ -40,33 +41,37 @@ impl Line {
     }
 }
 
-fn count_overlaps(lines: &Vec<Line>) -> usize {
-    let mut counts = HashMap::new();
-
-    lines.iter().for_each(|line| {
-        (0..=line.length()).for_each(|d| {
-            let x = line.start_x + (line.dx() * d);
-            let y = line.start_y + (line.dy() * d);
-
-            let count = counts.entry((x, y)).or_insert(0);
+fn count_overlaps(lines: &[Line]) -> usize {
+    lines
+        .iter()
+        .flat_map(|line| {
+            (0..=line.length()).map(|d| {
+                let x = line.start_x + (line.dx() * d);
+                let y = line.start_y + (line.dy() * d);
+                (x, y)
+            })
+        })
+        .fold(HashMap::new(), |mut counter, (x, y)| {
+            let count = counter.entry((x, y)).or_insert(0);
             *count += 1;
-        });
-    });
-
-    counts.iter().filter(|(_k, v)| **v >= 2).count()
+            counter
+        })
+        .values()
+        .filter(|v| **v >= 2)
+        .count()
 }
 
-fn part_1(lines: &Vec<Line>) -> usize {
+fn part_1(lines: &[Line]) -> usize {
     count_overlaps(
         &lines
             .iter()
             .cloned()
             .filter(|line| line.start_x == line.end_x || line.start_y == line.end_y)
-            .collect(),
+            .collect_vec(),
     )
 }
 
-fn part_2(lines: &Vec<Line>) -> usize {
+fn part_2(lines: &[Line]) -> usize {
     count_overlaps(lines)
 }
 
