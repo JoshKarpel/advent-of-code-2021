@@ -1,8 +1,8 @@
 use crate::utils::SolverResult;
 use itertools::Itertools;
 use lazy_static::lazy_static;
+use ndarray::Array2;
 use regex::Regex;
-use std::collections::HashMap;
 use std::fs::read_to_string;
 
 #[derive(Debug, Clone, Copy)]
@@ -21,42 +21,36 @@ impl Line {
     }
 
     fn dx(&self) -> isize {
-        if let Some(dx) =
-            (self.end_x - self.start_x).checked_div(self.start_x.abs_diff(self.end_x) as isize)
-        {
-            dx
-        } else {
-            0
-        }
+        (self.end_x - self.start_x).signum()
     }
 
     fn dy(&self) -> isize {
-        if let Some(dy) =
-            (self.end_y - self.start_y).checked_div(self.start_y.abs_diff(self.end_y) as isize)
-        {
-            dy
-        } else {
-            0
-        }
+        (self.end_y - self.start_y).signum()
     }
 }
 
 fn count_overlaps(lines: &[Line]) -> usize {
+    let largest_dim = 1 + lines
+        .iter()
+        .flat_map(|line| [line.start_x, line.end_x, line.start_y, line.end_y])
+        .max()
+        .unwrap() as usize;
+
     lines
         .iter()
         .flat_map(|line| {
-            (0..=line.length()).map(|d| {
-                let x = line.start_x + (line.dx() * d);
-                let y = line.start_y + (line.dy() * d);
-                (x, y)
-            })
+            let dx = line.dx();
+            let dy = line.dy();
+            (0..=line.length()).map(move |d| (line.start_x + (dx * d), line.start_y + (dy * d)))
         })
-        .fold(HashMap::new(), |mut counter, point| {
-            let count = counter.entry(point).or_insert(0);
-            *count += 1;
-            counter
-        })
-        .values()
+        .fold(
+            Array2::zeros((largest_dim, largest_dim)),
+            |mut counts: Array2<u8>, (x, y)| {
+                counts[[x as usize, y as usize]] += 1;
+                counts
+            },
+        )
+        .iter()
         .filter(|&&v| v >= 2)
         .count()
 }
