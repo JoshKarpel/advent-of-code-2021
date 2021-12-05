@@ -1,7 +1,6 @@
 use crate::utils::SolverResult;
 use itertools::Itertools;
 use num::Num;
-
 use std::fs::read_to_string;
 
 fn part_1<N: Num + PartialOrd>(depths: &[N]) -> usize {

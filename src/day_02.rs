@@ -1,12 +1,12 @@
 use itertools::Itertools;
 use ndarray::{array, Array1};
+use num::Num;
 use std::error::Error;
 use std::fs::read_to_string;
 use std::ops::{Add, Sub};
 use std::str::FromStr;
 
 use crate::utils::SolverResult;
-use num::Num;
 
 enum Direction {
     Forward,
