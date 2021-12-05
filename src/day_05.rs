@@ -51,13 +51,13 @@ fn count_overlaps(lines: &[Line]) -> usize {
                 (x, y)
             })
         })
-        .fold(HashMap::new(), |mut counter, (x, y)| {
-            let count = counter.entry((x, y)).or_insert(0);
+        .fold(HashMap::new(), |mut counter, point| {
+            let count = counter.entry(point).or_insert(0);
             *count += 1;
             counter
         })
         .values()
-        .filter(|v| **v >= 2)
+        .filter(|&&v| v >= 2)
         .count()
 }
 
