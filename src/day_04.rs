@@ -2,28 +2,25 @@ use crate::utils::SolverResult;
 use ndarray::Array2;
 use std::collections::HashSet;
 use std::fs::read_to_string;
+use std::ops::ControlFlow::{Break, Continue};
 
 type Board = Array2<usize>;
 
-fn wins(board: &Board, draw_set: &HashSet<&usize>, last_draw: &usize) -> Option<usize> {
+fn wins(board: &Board, draws: &HashSet<&usize>, last_draw: &usize) -> Option<usize> {
     if board
         .rows()
         .into_iter()
         .chain(board.columns().into_iter())
-        .any(|x| x.into_iter().all(|e| draw_set.contains(e)))
+        .any(|x| x.into_iter().all(|e| draws.contains(e)))
     {
-        Some(score(board, draw_set, last_draw))
+        Some(score(board, draws, last_draw))
     } else {
         None
     }
 }
 
-fn score(board: &Board, draw_set: &HashSet<&usize>, last_draw: &usize) -> usize {
-    last_draw
-        * board
-            .iter()
-            .filter(|x| !draw_set.contains(x))
-            .sum::<usize>()
+fn score(board: &Board, draws: &HashSet<&usize>, last_draw: &usize) -> usize {
+    last_draw * board.iter().filter(|x| !draws.contains(x)).sum::<usize>()
 }
 
 fn part_1(draws: &[usize], boards: &[Board]) -> usize {
@@ -39,21 +36,32 @@ fn part_1(draws: &[usize], boards: &[Board]) -> usize {
 }
 
 fn part_2(draws: &[usize], boards: &[Board]) -> usize {
-    let mut draw_set = HashSet::new();
-    let mut boards = boards.to_vec();
-
     draws
         .iter()
-        .find_map(|last_draw| {
-            draw_set.insert(last_draw);
+        .try_fold(
+            (boards.to_vec(), HashSet::new()),
+            |(boards, mut draw_set), last_draw| {
+                draw_set.insert(last_draw);
 
-            if boards.len() == 1 {
-                wins(&boards[0], &draw_set, last_draw)
-            } else {
-                boards.retain(|b| wins(b, &draw_set, last_draw).is_none());
-                None
-            }
-        })
+                if boards.len() == 1 {
+                    if let Some(score) = wins(&boards[0], &draw_set, last_draw) {
+                        Break(score)
+                    } else {
+                        Continue((boards, draw_set))
+                    }
+                } else {
+                    Continue((
+                        boards
+                            .iter()
+                            .cloned()
+                            .filter(|b| wins(b, &draw_set, last_draw).is_none())
+                            .collect(),
+                        draw_set,
+                    ))
+                }
+            },
+        )
+        .break_value()
         .unwrap()
 }
 
