@@ -1,5 +1,6 @@
 #![feature(array_windows)]
 #![feature(int_abs_diff)]
+#![feature(control_flow_enum)]
 
 pub mod day_01;
 pub mod day_02;
