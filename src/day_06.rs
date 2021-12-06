@@ -8,20 +8,10 @@ fn track(fish: &[usize], days: usize) -> usize {
     fish.iter().for_each(|f| counts[*f] += 1);
 
     (0..days).for_each(|_day| {
-        counts
-            .clone()
-            .iter()
-            .enumerate()
-            .rev() // go in reverse order so that we go in the same direction the counts are moving
-            .for_each(|(timer, count)| {
-                counts[timer] -= count;
-                if timer == 0 {
-                    counts[8] += count;
-                    counts[6] += count;
-                } else {
-                    counts[timer - 1] += count;
-                }
-            })
+        counts.rotate_left(1);
+        // the counts that were in 0 are now in 8 (they now represent the new fish),
+        // and should also be added to 6 (the old fish, now reset).
+        counts[6] += counts[8];
     });
 
     counts.iter().sum()
