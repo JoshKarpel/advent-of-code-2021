@@ -1,40 +1,42 @@
 use crate::utils::SolverResult;
 use itertools::Itertools;
-use std::collections::HashMap;
 use std::fs::read_to_string;
 
-fn track(fish: &[u8], days: usize) -> usize {
-    (0..days)
-        .fold(fish.iter().cloned().counts(), |counts, _day| {
-            let mut new_counts = HashMap::new();
+fn track(fish: &[usize], days: usize) -> usize {
+    let mut counts = [0usize; 9];
 
-            counts.iter().for_each(|(&k, &v)| {
-                if k == 0 {
-                    new_counts.insert(8, v);
-                    let six = new_counts.entry(6).or_insert(0);
-                    *six += v;
+    fish.iter().for_each(|f| counts[*f] += 1);
+
+    (0..days).for_each(|_day| {
+        counts
+            .clone()
+            .iter()
+            .enumerate()
+            .rev() // go in reverse order so that we go in the same direction the counts are moving
+            .for_each(|(timer, count)| {
+                counts[timer] -= count;
+                if timer == 0 {
+                    counts[8] += count;
+                    counts[6] += count;
                 } else {
-                    let down_one = new_counts.entry(k - 1).or_insert(0);
-                    *down_one += v;
+                    counts[timer - 1] += count;
                 }
-            });
+            })
+    });
 
-            new_counts
-        })
-        .values()
-        .sum()
+    counts.iter().sum()
 }
 
-fn part_1(fish: &[u8]) -> usize {
+fn part_1(fish: &[usize]) -> usize {
     track(fish, 80)
 }
 
-fn part_2(fish: &[u8]) -> usize {
+fn part_2(fish: &[usize]) -> usize {
     track(fish, 256)
 }
 
 pub fn solve() -> SolverResult {
-    let fish: Vec<u8> = read_to_string("data/day_06.txt")?
+    let fish: Vec<usize> = read_to_string("data/day_06.txt")?
         .trim()
         .split(',')
         .map(&str::parse)
@@ -50,7 +52,7 @@ pub fn solve() -> SolverResult {
 mod tests {
     use super::*;
 
-    const FISH: [u8; 5] = [3, 4, 3, 1, 2];
+    const FISH: [usize; 5] = [3, 4, 3, 1, 2];
 
     #[test]
     fn part_1_examples() {
