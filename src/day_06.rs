@@ -1,26 +1,36 @@
 use crate::utils::SolverResult;
 use itertools::Itertools;
+use std::collections::HashMap;
 use std::fs::read_to_string;
 
-fn day(fish: &[u8]) -> Vec<u8> {
-    fish.iter().fold(Vec::new(), |mut new_fish, f| {
-        match f {
-            0 => {
-                new_fish.push(6);
-                new_fish.push(8);
-            }
-            fish => new_fish.push(fish - 1),
-        }
-        new_fish
-    })
+fn track(fish: &[u8], days: usize) -> usize {
+    (0..days)
+        .fold(fish.iter().cloned().counts(), |counts, _day| {
+            let mut new_counts = HashMap::new();
+
+            counts.iter().for_each(|(&k, &v)| {
+                if k == 0 {
+                    new_counts.insert(8, v);
+                    let six = new_counts.entry(6).or_insert(0);
+                    *six += v;
+                } else {
+                    let down_one = new_counts.entry(k - 1).or_insert(0);
+                    *down_one += v;
+                }
+            });
+
+            new_counts
+        })
+        .values()
+        .sum()
 }
 
 fn part_1(fish: &[u8]) -> usize {
-    (0..80).fold(fish.to_vec(), |fish, _f| day(&fish)).len()
+    track(fish, 80)
 }
 
 fn part_2(fish: &[u8]) -> usize {
-    (0..256).fold(fish.to_vec(), |fish, _f| day(&fish)).len()
+    track(fish, 256)
 }
 
 pub fn solve() -> SolverResult {
@@ -38,7 +48,7 @@ pub fn solve() -> SolverResult {
 
 #[cfg(test)]
 mod tests {
-    use crate::day_06::part_1;
+    use super::*;
 
     const FISH: [u8; 5] = [3, 4, 3, 1, 2];
 
@@ -49,6 +59,6 @@ mod tests {
 
     #[test]
     fn part_2_examples() {
-        assert_eq!(part_1(&FISH), 26984457539);
+        assert_eq!(part_2(&FISH), 26984457539);
     }
 }
