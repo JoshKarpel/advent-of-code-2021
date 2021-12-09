@@ -1,6 +1,10 @@
 #![feature(array_windows)]
 #![feature(int_abs_diff)]
 #![feature(control_flow_enum)]
+#![feature(bool_to_option)]
+
+#[macro_use]
+extern crate lazy_static;
 
 pub mod day_01;
 pub mod day_02;

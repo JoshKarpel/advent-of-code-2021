@@ -1,5 +1,6 @@
 use crate::utils::SolverResult;
-use std::collections::HashSet;
+use itertools::Itertools;
+use std::collections::{BTreeSet, HashMap};
 use std::fs::read_to_string;
 
 //   0:      1:      2:      3:      4:
@@ -19,25 +20,190 @@ use std::fs::read_to_string;
 // .    f  e    f  .    f  e    f  .    f
 // .    f  e    f  .    f  e    f  .    f
 //  gggg    gggg    ....    gggg    gggg
-
+//
 // Digit -> # Segments
-//     0 -> 6
 //     1 -> 2  (unique)
-//     2 -> 5
-//     3 -> 5
 //     4 -> 4  (unique)
-//     5 -> 5
-//     6 -> 6
 //     7 -> 3  (unique)
 //     8 -> 7  (unique)
+//
+//     2 -> 5
+//     3 -> 5
+//     5 -> 5
+//
+//     0 -> 6
+//     6 -> 6
 //     9 -> 6
+
+type Digit = BTreeSet<char>;
+
+macro_rules! set {
+    ( $( $x:expr ),* ) => {
+        {
+            let mut set = Digit::new();
+            $(
+                set.insert($x);
+            )*
+            set
+        }
+    };
+}
+
+lazy_static! {
+    static ref ZERO: Digit = set!['a', 'b', 'c', 'e', 'f', 'g'];
+    static ref ONE: Digit = set!['c', 'f'];
+    static ref TWO: Digit = set!['a', 'c', 'd', 'e', 'g'];
+    static ref THREE: Digit = set!['a', 'c', 'd', 'f', 'g'];
+    static ref FOUR: Digit = set!['b', 'c', 'd', 'f'];
+    static ref FIVE: Digit = set!['a', 'b', 'd', 'f', 'g'];
+    static ref SIX: Digit = set!['a', 'b', 'd', 'e', 'f', 'g'];
+    static ref SEVEN: Digit = set!['a', 'c', 'f'];
+    static ref EIGHT: Digit = set!['a', 'b', 'c', 'd', 'e', 'f', 'g'];
+    static ref NINE: Digit = set!['a', 'b', 'c', 'd', 'f', 'g'];
+    static ref VALUES: HashMap<&'static Digit, char> = {
+        let mut values: HashMap<&'static Digit, char> = HashMap::new();
+
+        values.insert(&ZERO, '0');
+        values.insert(&ONE, '1');
+        values.insert(&TWO, '2');
+        values.insert(&THREE, '3');
+        values.insert(&FOUR, '4');
+        values.insert(&FIVE, '5');
+        values.insert(&SIX, '6');
+        values.insert(&SEVEN, '7');
+        values.insert(&EIGHT, '8');
+        values.insert(&NINE, '9');
+
+        values
+    };
+}
 
 const UNIQUE_SEGMENT_COUNTS: [usize; 4] = [2, 3, 4, 7];
 
-type Digit = HashSet<char>;
+#[derive(Debug, Clone)]
 struct Display {
     signal_patterns: Vec<Digit>,
     output_value: Vec<Digit>,
+}
+
+impl Display {
+    fn mapping(&self) -> HashMap<Digit, &'static Digit> {
+        let mut mapping: HashMap<Digit, &'static Digit> = HashMap::new();
+
+        let mut by_length: HashMap<usize, Vec<&Digit>> = HashMap::new();
+
+        self.signal_patterns.iter().for_each(|pattern| {
+            by_length
+                .entry(pattern.len())
+                .or_insert(Vec::new())
+                .push(pattern);
+        });
+
+        // Some patterns must be for certain numbers based on length.
+        let one = (*by_length.get(&2).unwrap().first().unwrap()).clone();
+        let four = (*by_length.get(&4).unwrap().first().unwrap()).clone();
+        let seven = (*by_length.get(&3).unwrap().first().unwrap()).clone();
+        let eight = (*by_length.get(&7).unwrap().first().unwrap()).clone();
+        mapping.insert(one.clone(), &ONE);
+        mapping.insert(four.clone(), &FOUR);
+        mapping.insert(seven.clone(), &SEVEN);
+        mapping.insert(eight, &EIGHT);
+
+        // The character from 7 that is not in 1 is 'a'.
+        let a = *(&seven - &one).iter().next().unwrap();
+
+        // The other two characters in 7 are 'c' and 'f'.
+        let cf = &seven - &set![a];
+
+        // The two characters in 4 that aren't in 7 are 'b' and 'd'.
+        let bd = &four - &seven;
+
+        // Look at 0, 6, and 9. 'c' is in 0 and 9, but 'f' is in all three.
+        let f = *cf
+            .iter()
+            .find_map(|x| {
+                by_length
+                    .get(&6)
+                    .unwrap()
+                    .iter()
+                    .all(|digit| digit.contains(x))
+                    .then_some(x)
+            })
+            .unwrap();
+
+        // 'c' is the other one
+        let c = *(&cf - &set![f]).iter().next().unwrap();
+
+        // Now we know which digit is 6.
+        let six = by_length
+            .get(&6)
+            .unwrap()
+            .iter()
+            .find_map(|digit| (!digit.contains(&c)).then_some(digit))
+            .unwrap();
+        mapping.insert((**six).clone(), &SIX);
+
+        // We can differentiate between 0 and 9 because 9 has 'd' but 0 does not,
+        // but both have 'b', and we know 'bd'.
+        let nine = by_length
+            .get(&6)
+            .unwrap()
+            .iter()
+            .find_map(|digit| (bd.is_subset(digit) && digit != six).then_some(digit))
+            .unwrap();
+        mapping.insert((**nine).clone(), &NINE);
+
+        // 0 is the last of the three.
+        let zero = by_length
+            .get(&6)
+            .unwrap()
+            .iter()
+            .find(|digit| digit != &six && digit != &nine)
+            .unwrap();
+        mapping.insert((**zero).clone(), &ZERO);
+
+        // Among 2, 3, and 5, the one that does not have 'c' is 5.
+        let five = by_length
+            .get(&5)
+            .unwrap()
+            .iter()
+            .find_map(|digit| (!digit.contains(&c)).then_some(digit))
+            .unwrap();
+        // println!("5 : {:?}", five);
+        mapping.insert((**five).clone(), &FIVE);
+
+        // Between 2 and 3, 2 does not have 'f'.
+        let two = by_length
+            .get(&5)
+            .unwrap()
+            .iter()
+            .find_map(|digit| (!digit.contains(&f) && digit != five).then_some(digit))
+            .unwrap();
+        mapping.insert((**two).clone(), &TWO);
+
+        // And 3 is whatever is left!
+        let three = by_length
+            .get(&5)
+            .unwrap()
+            .iter()
+            .find(|digit| digit != &five && digit != &two)
+            .unwrap();
+        mapping.insert((**three).clone(), &THREE);
+
+        mapping
+    }
+
+    fn deduce_output(&self) -> usize {
+        let mapping = self.mapping();
+
+        self.output_value
+            .iter()
+            .map(|ov| mapping.get(ov).unwrap())
+            .map(|digit| VALUES.get(digit).unwrap())
+            .join("")
+            .parse()
+            .unwrap()
+    }
 }
 
 fn part_1(inputs: &[Display]) -> usize {
@@ -48,15 +214,15 @@ fn part_1(inputs: &[Display]) -> usize {
         .count()
 }
 
-fn part_2(_inputs: &[Display]) -> usize {
-    0
+fn part_2(inputs: &[Display]) -> usize {
+    inputs.iter().map(Display::deduce_output).sum()
 }
 
 fn parse_input(input: &str) -> Vec<Display> {
     input
         .lines()
         .map(|line| {
-            let (signal_patterns, output_value) = line.split_once('|').unwrap();
+            let (signal_patterns, output_value) = line.split_once(" | ").unwrap();
             Display {
                 signal_patterns: signal_patterns
                     .split(' ')
@@ -84,7 +250,9 @@ pub fn solve() -> SolverResult {
 mod tests {
     use super::*;
 
-    const INPUT: &str = "\
+    const SMALL_INPUT: &str =
+        "acedgfb cdfbe gcdfa fbcad dab cefabd cdfgeb eafb cagedb ab | cdfeb fcadb cdfeb cdbaf";
+    const BIG_INPUT: &str = "\
 be cfbegad cbdgef fgaecd cgeb fdcge agebfd fecdb fabcd edb | fdgacbe cefdb cefbgd gcbe
 edbfga begcd cbg gc gcadebf fbgde acbgfd abcde gfcbed gfec | fcgedb cgb dgebacf gc
 fgaebd cg bdaec gdafb agbcfd gdcbef bgcad gfac gcb cdgabef | cg cg fdcagb cbg
@@ -98,11 +266,12 @@ gcafb gcf dcaebfg ecagb gf abcdeg gaef cafbge fdbac fegbdc | fgae cfgab fg bagce
 
     #[test]
     fn part_1_examples() {
-        assert_eq!(part_1(&parse_input(INPUT)), 26);
+        assert_eq!(part_1(&parse_input(BIG_INPUT)), 26);
     }
 
     #[test]
     fn part_2_examples() {
-        assert_eq!(part_2(&parse_input(INPUT)), 61229);
+        assert_eq!(part_2(&parse_input(SMALL_INPUT)), 5353);
+        assert_eq!(part_2(&parse_input(BIG_INPUT)), 61229);
     }
 }
