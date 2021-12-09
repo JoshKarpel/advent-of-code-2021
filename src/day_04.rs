@@ -67,7 +67,7 @@ fn part_2(draws: &[usize], boards: &[Board]) -> usize {
 
 pub fn solve() -> SolverResult {
     let (draws, boards): (Vec<usize>, Vec<Board>) = read_to_string("data/day_04.txt")?
-        .split_once("\n")
+        .split_once('\n')
         .map(|(draws, boards)| {
             (
                 draws.split(',').map(|d| d.parse().unwrap()).collect(),
