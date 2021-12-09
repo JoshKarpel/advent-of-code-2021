@@ -60,7 +60,7 @@ lazy_static! {
     static ref SEVEN: Digit = set!['a', 'c', 'f'];
     static ref EIGHT: Digit = set!['a', 'b', 'c', 'd', 'e', 'f', 'g'];
     static ref NINE: Digit = set!['a', 'b', 'c', 'd', 'f', 'g'];
-    static ref VALUES: HashMap<&'static Digit, char> = {
+    static ref DIGIT_TO_CHAR: HashMap<&'static Digit, char> = {
         let mut values: HashMap<&'static Digit, char> = HashMap::new();
 
         values.insert(&ZERO, '0');
@@ -95,7 +95,7 @@ impl Display {
         self.signal_patterns.iter().for_each(|pattern| {
             by_length
                 .entry(pattern.len())
-                .or_insert(Vec::new())
+                .or_insert_with(Vec::new)
                 .push(pattern);
         });
 
@@ -109,22 +109,19 @@ impl Display {
         mapping.insert(seven.clone(), &SEVEN);
         mapping.insert(eight, &EIGHT);
 
-        // The character from 7 that is not in 1 is 'a'.
-        let a = *(&seven - &one).iter().next().unwrap();
-
-        // The other two characters in 7 are 'c' and 'f'.
-        let cf = &seven - &set![a];
+        // The two characters in 7 that are also in 1 are 'c' and 'f'.
+        let cf = &seven & &one;
 
         // The two characters in 4 that aren't in 7 are 'b' and 'd'.
         let bd = &four - &seven;
 
         // Look at 0, 6, and 9. 'c' is in 0 and 9, but 'f' is in all three.
+        let zero_six_nine = by_length.get(&6).unwrap();
+
         let f = *cf
             .iter()
             .find_map(|x| {
-                by_length
-                    .get(&6)
-                    .unwrap()
+                zero_six_nine
                     .iter()
                     .all(|digit| digit.contains(x))
                     .then_some(x)
@@ -132,62 +129,57 @@ impl Display {
             .unwrap();
 
         // 'c' is the other one
-        let c = *(&cf - &set![f]).iter().next().unwrap();
+        let c = *cf.difference(&set![f]).next().unwrap();
 
-        // Now we know which digit is 6.
-        let six = by_length
-            .get(&6)
-            .unwrap()
+        // Now we can find 6 because it is the only digit among 0, 6, and 9 that does not include 'c'.
+        let six = zero_six_nine
             .iter()
             .find_map(|digit| (!digit.contains(&c)).then_some(digit))
             .unwrap();
         mapping.insert((**six).clone(), &SIX);
 
+        let zero_nine: Vec<&Digit> = zero_six_nine
+            .iter()
+            .filter(|digit| digit != &six)
+            .cloned()
+            .collect();
+
         // We can differentiate between 0 and 9 because 9 has 'd' but 0 does not,
         // but both have 'b', and we know 'bd'.
-        let nine = by_length
-            .get(&6)
-            .unwrap()
+        let nine = zero_nine
             .iter()
-            .find_map(|digit| (bd.is_subset(digit) && digit != six).then_some(digit))
+            .find_map(|digit| bd.is_subset(digit).then_some(digit))
             .unwrap();
         mapping.insert((**nine).clone(), &NINE);
 
         // 0 is the last of the three.
-        let zero = by_length
-            .get(&6)
-            .unwrap()
-            .iter()
-            .find(|digit| digit != &six && digit != &nine)
-            .unwrap();
+        let zero = zero_nine.iter().find(|digit| digit != &nine).unwrap();
         mapping.insert((**zero).clone(), &ZERO);
 
-        // Among 2, 3, and 5, the one that does not have 'c' is 5.
-        let five = by_length
-            .get(&5)
-            .unwrap()
+        // Among 2, 3, and 5, the only one that does not have 'c' is 5.
+        let two_three_five = by_length.get(&5).unwrap();
+
+        let five = two_three_five
             .iter()
             .find_map(|digit| (!digit.contains(&c)).then_some(digit))
             .unwrap();
-        // println!("5 : {:?}", five);
         mapping.insert((**five).clone(), &FIVE);
 
-        // Between 2 and 3, 2 does not have 'f'.
-        let two = by_length
-            .get(&5)
-            .unwrap()
+        let two_three: Vec<&Digit> = two_three_five
             .iter()
-            .find_map(|digit| (!digit.contains(&f) && digit != five).then_some(digit))
+            .filter(|x| x != &five)
+            .cloned()
+            .collect();
+
+        // Between 2 and 3, 2 does not have 'f'.
+        let two = two_three
+            .iter()
+            .find_map(|digit| (!digit.contains(&f)).then_some(digit))
             .unwrap();
-        mapping.insert((**two).clone(), &TWO);
+        mapping.insert((*two).clone(), &TWO);
 
         // And 3 is whatever is left!
-        let three = by_length
-            .get(&5)
-            .unwrap()
-            .iter()
-            .find(|digit| digit != &five && digit != &two)
-            .unwrap();
+        let three = two_three.iter().find(|x| x != &two).unwrap();
         mapping.insert((**three).clone(), &THREE);
 
         mapping
@@ -199,7 +191,7 @@ impl Display {
         self.output_value
             .iter()
             .map(|ov| mapping.get(ov).unwrap())
-            .map(|digit| VALUES.get(digit).unwrap())
+            .map(|digit| DIGIT_TO_CHAR.get(digit).unwrap())
             .join("")
             .parse()
             .unwrap()
