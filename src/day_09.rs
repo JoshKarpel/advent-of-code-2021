@@ -1,6 +1,7 @@
 use crate::utils::SolverResult;
 use itertools::Itertools;
 use ndarray::{s, Array2};
+use std::collections::{BinaryHeap, HashMap};
 use std::fs::read_to_string;
 
 fn part_1(heights: &Array2<usize>) -> usize {
@@ -12,7 +13,7 @@ fn part_1(heights: &Array2<usize>) -> usize {
             let edges = window
                 .iter()
                 .enumerate()
-                .filter_map(|(idx, element)| (idx != 4).then_some(element))
+                .filter_map(|(idx, element)| (idx % 2 == 1).then_some(element))
                 .cloned()
                 .collect_vec();
             edges.iter().all(|&o| o > center).then_some(center + 1)
@@ -20,8 +21,57 @@ fn part_1(heights: &Array2<usize>) -> usize {
         .sum()
 }
 
-fn part_2(_heights: &Array2<usize>) -> usize {
-    0
+fn part_2(heights: &Array2<usize>) -> usize {
+    let mut new_basin: usize = 0;
+    let mut basins = HashMap::new();
+
+    heights.indexed_iter().for_each(|((x, y), h)| {
+        if h >= &9 {
+            return;
+        }
+
+        if basins.contains_key(&(x, y)) {
+            return;
+        }
+
+        let mut candidates = vec![(x, y)];
+        while !candidates.is_empty() {
+            let (x, y) = candidates.pop().unwrap();
+
+            if heights[[x, y]] >= 9 {
+                continue;
+            }
+
+            basins.insert((x, y), new_basin);
+
+            if let Some(new_x) = x.checked_sub(1) {
+                candidates.push((new_x, y));
+            }
+            if let Some(new_y) = y.checked_sub(1) {
+                candidates.push((x, new_y));
+            }
+            if (x + 1) < heights.shape()[0] {
+                candidates.push((x + 1, y));
+            }
+            if (y + 1) < heights.shape()[1] {
+                candidates.push((x, y + 1));
+            }
+
+            candidates.retain(|xy| !basins.contains_key(xy));
+        }
+
+        new_basin += 1;
+    });
+
+    basins
+        .values()
+        .counts()
+        .values()
+        .cloned()
+        .collect::<BinaryHeap<usize>>()
+        .drain_sorted()
+        .take(3)
+        .product()
 }
 
 fn parse_input(input: &str) -> Array2<usize> {
