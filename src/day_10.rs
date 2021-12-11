@@ -38,34 +38,7 @@ lazy_static! {
     };
 }
 
-fn check(line: &str) -> Option<char> {
-    let mut stack = Vec::new();
-    line.chars().find_map(|char| {
-        if OPEN.contains(&char) {
-            stack.push(char);
-            None
-        } else if let Some(last_open) = stack.last() {
-            if let Some(&closer) = OPEN_TO_CLOSE.get(last_open) {
-                if char == closer {
-                    // right closer
-                    stack.pop();
-                    None
-                } else {
-                    // wrong closer
-                    Some(char)
-                }
-            } else {
-                // the character wasn't even a closer
-                Some(char)
-            }
-        } else {
-            // empty stack, move on
-            None
-        }
-    })
-}
-
-fn complete(line: &str) -> Option<String> {
+fn parse(line: &str) -> Result<Vec<char>, char> {
     let mut stack = Vec::new();
     let error = line.chars().find_map(|char| {
         if OPEN.contains(&char) {
@@ -91,9 +64,23 @@ fn complete(line: &str) -> Option<String> {
         }
     });
 
-    if error.is_some() {
-        None
+    if let Some(e) = error {
+        Err(e)
     } else {
+        Ok(stack)
+    }
+}
+
+fn check(line: &str) -> Option<char> {
+    if let Err(e) = parse(line) {
+        Some(e)
+    } else {
+        None
+    }
+}
+
+fn complete(line: &str) -> Option<String> {
+    if let Ok(mut stack) = parse(line) {
         stack.reverse();
         Some(
             stack
@@ -101,6 +88,8 @@ fn complete(line: &str) -> Option<String> {
                 .map(|open| OPEN_TO_CLOSE.get(open).unwrap())
                 .collect(),
         )
+    } else {
+        None
     }
 }
 
