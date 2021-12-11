@@ -44,23 +44,21 @@ fn parse(line: &str) -> Result<Vec<char>, char> {
         if OPEN.contains(&char) {
             stack.push(char);
             None
-        } else if let Some(last_open) = stack.last() {
-            if let Some(&closer) = OPEN_TO_CLOSE.get(last_open) {
-                if char == closer {
-                    // right closer
-                    stack.pop();
-                    None
-                } else {
-                    // wrong closer
-                    Some(char)
-                }
+        } else if let Some(&closer) = stack
+            .last()
+            .and_then(|last_open| OPEN_TO_CLOSE.get(last_open))
+        {
+            if char == closer {
+                // right closer
+                stack.pop();
+                None
             } else {
-                // the character wasn't even a closer
+                // wrong closer
                 Some(char)
             }
         } else {
-            // empty stack, move on
-            None
+            // empty stack, or the character wasn't a closer
+            Some(char)
         }
     });
 
@@ -80,17 +78,15 @@ fn check(line: &str) -> Option<char> {
 }
 
 fn complete(line: &str) -> Option<String> {
-    if let Ok(mut stack) = parse(line) {
-        stack.reverse();
-        Some(
+    parse(line)
+        .map(|stack| {
             stack
                 .iter()
+                .rev()
                 .map(|open| OPEN_TO_CLOSE.get(open).unwrap())
-                .collect(),
-        )
-    } else {
-        None
-    }
+                .collect()
+        })
+        .ok()
 }
 
 fn part_1(lines: &[&str]) -> usize {
