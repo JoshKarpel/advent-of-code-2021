@@ -24,42 +24,53 @@ fn neighbours(p: &Position) -> Vec<Position> {
     ]
 }
 
-fn part_1(levels: Levels) -> usize {
-    (0..100)
-        .scan(levels, |levels, _| {
-            levels.values_mut().for_each(|level| *level += 1);
+fn find_flashers(levels: &mut Levels) -> HashSet<Position> {
+    levels.values_mut().for_each(|level| *level += 1);
 
-            let mut flashed = HashSet::new();
-            while levels
-                .iter()
-                .any(|(p, &level)| level > 9 && !flashed.contains(p))
-            {
-                levels.clone().iter().for_each(|(p, &level)| {
-                    if level <= 9 || flashed.contains(p) {
-                        return;
-                    }
-
-                    flashed.insert(*p);
-
-                    neighbours(p).iter().for_each(|neighbour| {
-                        if let Some(l) = levels.get_mut(neighbour) {
-                            *l += 1
-                        }
-                    })
-                })
+    let mut flashed = HashSet::new();
+    while levels
+        .iter()
+        .any(|(p, &level)| level > 9 && !flashed.contains(p))
+    {
+        levels.clone().iter().for_each(|(p, &level)| {
+            if level <= 9 || flashed.contains(p) {
+                return;
             }
 
-            flashed.iter().for_each(|p| {
-                levels.insert(*p, 0);
-            });
+            flashed.insert(*p);
 
-            Some(flashed.len())
+            neighbours(p).iter().for_each(|neighbour| {
+                if let Some(l) = levels.get_mut(neighbour) {
+                    *l += 1
+                }
+            })
+        })
+    }
+
+    flashed.iter().for_each(|p| {
+        levels.insert(*p, 0);
+    });
+
+    flashed
+}
+
+fn part_1(levels: &Levels) -> usize {
+    (0..100)
+        .scan(levels.clone(), |levels, _| {
+            let flashers = find_flashers(levels);
+
+            Some(flashers.len())
         })
         .sum()
 }
 
-fn part_2() -> isize {
-    -1
+fn part_2(levels: &Levels) -> isize {
+    (1..)
+        .scan(levels.clone(), |levels, step| {
+            Some((find_flashers(levels), step))
+        })
+        .find_map(|(flashers, step)| (flashers.len() == levels.len()).then_some(step))
+        .unwrap()
 }
 
 fn parse_input(input: &str) -> Levels {
@@ -80,15 +91,15 @@ fn parse_input(input: &str) -> Levels {
 pub fn solve() -> SolverResult {
     let levels = parse_input(&read_to_string("data/day_11.txt")?);
 
-    println!("Part 1: {}", part_1(levels));
-    println!("Part 2: {}", part_2());
+    println!("Part 1: {}", part_1(&levels));
+    println!("Part 2: {}", part_2(&levels));
 
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::day_11::{parse_input, part_1};
+    use super::*;
 
     const INPUT: &str = "\
 5483143223
@@ -105,9 +116,11 @@ mod tests {
 
     #[test]
     fn part_1_examples() {
-        assert_eq!(part_1(parse_input(INPUT)), 1656);
+        assert_eq!(part_1(&parse_input(INPUT)), 1656);
     }
 
     #[test]
-    fn part_2_examples() {}
+    fn part_2_examples() {
+        assert_eq!(part_2(&parse_input(INPUT)), 195);
+    }
 }
