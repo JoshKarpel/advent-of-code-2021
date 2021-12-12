@@ -57,9 +57,7 @@ fn find_flashers(levels: &mut Levels) -> HashSet<Position> {
 fn part_1(levels: &Levels) -> usize {
     (0..100)
         .scan(levels.clone(), |levels, _| {
-            let flashers = find_flashers(levels);
-
-            Some(flashers.len())
+            Some(find_flashers(levels).len())
         })
         .sum()
 }
@@ -67,10 +65,11 @@ fn part_1(levels: &Levels) -> usize {
 fn part_2(levels: &Levels) -> isize {
     (1..)
         .scan(levels.clone(), |levels, step| {
-            Some((find_flashers(levels), step))
+            (find_flashers(levels).len() != levels.len()).then_some(step)
         })
-        .find_map(|(flashers, step)| (flashers.len() == levels.len()).then_some(step))
+        .last()
         .unwrap()
+        + 1 // add 1 because the last value we get is from the step before they all flash
 }
 
 fn parse_input(input: &str) -> Levels {
