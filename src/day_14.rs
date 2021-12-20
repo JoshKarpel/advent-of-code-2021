@@ -4,15 +4,18 @@ use itertools::MinMaxResult::MinMax;
 use std::collections::HashMap;
 use std::fs::read_to_string;
 
-type Pair = [char; 2];
 type Polymer = Vec<char>;
 type Rules = HashMap<[char; 2], char>;
 
 fn grow(polymer: &Polymer, rules: &Rules, steps: usize) -> usize {
+    // Count the number of each kind of pair in the polymer as we grow it.
+    // Because each pair is created "inside" an existing pair,
+    // we create two new pairs which cannot interact with any other pairs being created.
+    // The process is therefore "local", and we don't have to worry about the overall
+    // ordering of the pairs long the polymer.
     let pair_counts = (0..steps).fold(
         polymer.as_slice().array_windows().cloned().counts(),
-        |counts, step| {
-            println!("{} {:?}", step, counts);
+        |counts, _step| {
             let mut new_counts = HashMap::new();
             counts.iter().for_each(|(pair, count)| {
                 if let Some(&insert) = rules.get(pair) {
