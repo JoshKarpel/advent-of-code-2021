@@ -11,78 +11,55 @@ fn is_small(node: &str) -> bool {
     node.to_ascii_lowercase() == node
 }
 
-fn find_paths_part_1(edges: &Edges, path: Path) -> Option<Vec<Path>> {
-    edges.get(path.last().unwrap()).map(|nexts| {
+fn find_paths(edges: &Edges, path: Path, is_path_good: fn(path: &Path) -> bool) -> Vec<Path> {
+    if let Some(nexts) = edges.get(path.last().unwrap()) {
         nexts
             .iter()
-            .filter_map(|next| {
-                if is_small(next) && path.contains(next) {
-                    None
-                } else if next == "end" {
+            .flat_map(|next| {
+                if next == "end" {
                     let mut new_path: Path = path.clone();
                     new_path.push(next.clone());
-                    Some(vec![new_path])
+                    vec![new_path]
                 } else {
                     let mut new_path: Path = path.clone();
                     new_path.push(next.clone());
-                    find_paths_part_1(edges, new_path)
+                    if is_path_good(&new_path) {
+                        find_paths(edges, new_path, is_path_good)
+                    } else {
+                        vec![]
+                    }
                 }
             })
-            .flatten()
             .collect()
-    })
-}
-
-fn part_1(edges: &Edges) -> usize {
-    find_paths_part_1(edges, vec!["start".to_owned()])
-        .unwrap()
-        .len()
-}
-
-fn path_would_be_ok(path: &Path, next: &Node) -> bool {
-    if next == "start" {
-        false
     } else {
-        let mut new_path: Path = path.clone();
-        new_path.push(next.clone());
-
-        let node_visit_counts = new_path.iter().filter(|n| is_small(n)).counts();
-
-        (node_visit_counts
-            .values()
-            .filter(|&count| count > &1)
-            .count()
-            <= 1)
-            && (node_visit_counts.values().max().unwrap() <= &2)
+        vec![]
     }
 }
 
-fn find_paths_part_2(edges: &Edges, path: Path) -> Option<Vec<Path>> {
-    edges.get(path.last().unwrap()).map(|nexts| {
-        nexts
-            .iter()
-            .filter_map(|next| {
-                if !path_would_be_ok(&path, next) {
-                    None
-                } else if next == "end" {
-                    let mut new_path: Path = path.clone();
-                    new_path.push(next.clone());
-                    Some(vec![new_path])
-                } else {
-                    let mut new_path: Path = path.clone();
-                    new_path.push(next.clone());
-                    find_paths_part_2(edges, new_path)
-                }
-            })
-            .flatten()
-            .collect()
+fn part_1(edges: &Edges) -> usize {
+    find_paths(edges, vec!["start".to_owned()], |path| {
+        path.iter()
+            .filter(|node| is_small(node))
+            .counts()
+            .values()
+            .all(|count| count == &1)
     })
+    .len()
 }
 
 fn part_2(edges: &Edges) -> usize {
-    find_paths_part_2(edges, vec!["start".to_owned()])
-        .unwrap()
-        .len()
+    find_paths(edges, vec!["start".to_owned()], |path| {
+        let node_visit_counts = path.iter().filter(|node| is_small(node)).counts();
+
+        (path.last().unwrap() != "start")
+            && (node_visit_counts.values().max().unwrap() <= &2)
+            && (node_visit_counts
+                .values()
+                .filter(|&count| count > &1)
+                .count()
+                <= 1)
+    })
+    .len()
 }
 
 fn parse_input(input: &str) -> Edges {
