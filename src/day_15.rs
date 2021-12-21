@@ -1,11 +1,11 @@
 use crate::utils::SolverResult;
 
-fn part_1() -> isize {
-    -1
+fn part_1() -> usize {
+    0
 }
 
-fn part_2() -> isize {
-    -1
+fn part_2() -> usize {
+    0
 }
 
 pub fn solve() -> SolverResult {
