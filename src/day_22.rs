@@ -42,16 +42,11 @@ impl Cuboid {
                     upper: s.upper.min(o.upper),
                 })
                 .collect(),
-            sign: match (self.sign, other.sign) {
-                // This is the inclusion-exclusion rule, done iteratively.
-                // So by default, you flip the sign, because each intersection represents adding one more set to the intersection, which flips the sign of that term in the overall sum.
-                // But we also need to account for the "off" instructions
-                (1, 1) => -1,
-                (1, -1) => 1,
-                (-1, 1) => -1,
-                (-1, -1) => 1,
-                _ => unreachable!(),
-            },
+            // This is the sign-alternation in the inclusion-exclusion rule;
+            // unfortunately it depends on the choice of ordering in the fold in count_on
+            // (which cuboid we use as the argument:
+            // it should be the existing cuboid, which represents an existing intersection term).
+            sign: -other.sign,
         };
 
         (c.dims.iter().all(|d| d.is_valid())).then_some(c)
@@ -63,6 +58,15 @@ fn count_on(steps: &[Cuboid], initialization: bool) -> isize {
         .iter()
         .filter(|step| !initialization || step.dims.iter().all(|d| d.upper <= 50 && d.lower >= -50))
         .fold(Vec::new(), |mut cuboids: Vec<Cuboid>, step| {
+            // We're going to do inclusion-exclusion here, but iteratively, adding
+            // one new cuboid (i.e., set of points) at a time.
+            // This is significantly faster than trying to iterate over the powerset,
+            // because we can pre-emptively eliminate intersections that lead to empty sets
+            // early in the calculation.
+            // If we just started with the powerset, the vast, vast majority of those
+            // intersections would be empty, but we wouldn't know it until we started
+            // digging through the term.
+
             let mut intersections = cuboids
                 .iter()
                 .filter_map(|cuboid| step.intersection(cuboid))
@@ -70,6 +74,10 @@ fn count_on(steps: &[Cuboid], initialization: bool) -> isize {
 
             cuboids.append(&mut intersections);
 
+            // The only change to the inclusion-exclusion rule is that we don't add the
+            // initial (single-set) terms for "off" cuboids.
+            // This propagates down the chain to mean that we don't have any
+            // intersection terms that "start" with an "off" cuboid.
             if step.sign == 1 {
                 cuboids.push(step.clone());
             }
