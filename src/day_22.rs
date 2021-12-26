@@ -1,5 +1,6 @@
 use crate::utils::SolverResult;
 
+use itertools::iproduct;
 use regex::Regex;
 use std::collections::HashSet;
 use std::fs::read_to_string;
@@ -27,8 +28,42 @@ struct Step {
 
 type Grid = HashSet<(isize, isize, isize)>;
 
-fn part_1(_steps: &[Step]) -> usize {
-    0
+fn part_1(steps: &[Step]) -> usize {
+    steps
+        .iter()
+        .fold(Grid::new(), |mut grid, step| {
+            if [
+                step.cuboid.x.0,
+                step.cuboid.x.1,
+                step.cuboid.y.0,
+                step.cuboid.y.1,
+                step.cuboid.z.0,
+                step.cuboid.z.1,
+            ]
+            .iter()
+            .any(|x| x.abs() > 50)
+            {
+                grid
+            } else {
+                let iter = iproduct!(
+                    step.cuboid.x.0..=step.cuboid.x.1,
+                    step.cuboid.y.0..=step.cuboid.y.1,
+                    step.cuboid.z.0..=step.cuboid.z.1
+                );
+
+                iter.for_each(|p| match step.instruction {
+                    Instruction::On => {
+                        grid.insert(p);
+                    }
+                    Instruction::Off => {
+                        grid.remove(&p);
+                    }
+                });
+
+                grid
+            }
+        })
+        .len()
 }
 
 fn part_2(_steps: &[Step]) -> usize {
