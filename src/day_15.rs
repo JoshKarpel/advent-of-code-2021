@@ -1,9 +1,13 @@
-use crate::utils::SolverResult;
-use itertools::Itertools;
-use std::collections::{HashMap, HashSet};
+use std::cmp::Ordering;
+use std::collections::{BinaryHeap, HashMap};
 use std::fs::read_to_string;
 
+use itertools::iproduct;
+
+use crate::utils::SolverResult;
+
 type Position = (isize, isize);
+type Nodes = HashMap<Position, usize>;
 type Edges = HashMap<Position, Vec<Position>>;
 type Weights = HashMap<(Position, Position), usize>;
 
@@ -17,46 +21,65 @@ fn neighbours(p: &Position) -> Vec<Position> {
     vec![(x_m, *y), (*x, y_m), (*x, y_p), (x_p, *y)]
 }
 
-fn part_1(edges: &Edges, weights: &Weights) -> usize {
-    let mut unvisited: HashSet<&Position> = edges.keys().collect();
-    let mut shortest_paths: HashMap<Position, usize> = HashMap::new();
+// https://doc.rust-lang.org/std/collections/binary_heap/index.html
+#[derive(Copy, Clone, Eq, PartialEq)]
+struct State {
+    position: Position,
+    cost: usize,
+}
 
-    let mut current = **unvisited.iter().min().unwrap();
-    let destination = **unvisited.iter().max().unwrap();
+impl PartialOrd for State {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
 
-    shortest_paths.insert(current, 0);
+impl Ord for State {
+    fn cmp(&self, other: &Self) -> Ordering {
+        other
+            .cost
+            .cmp(&self.cost)
+            .then_with(|| self.position.cmp(&other.position))
+    }
+}
 
-    loop {
-        let current_weight = *shortest_paths.get(&current).unwrap();
-        if let Some(neighbours) = edges.get(&current) {
+fn find_shortest_path(edges: &Edges, weights: &Weights) -> Option<usize> {
+    let mut frontier = BinaryHeap::new();
+    let mut shortest_paths = HashMap::new();
+
+    let top_left = *edges.keys().min().unwrap();
+    let bottom_right = *edges.keys().max().unwrap();
+
+    frontier.push(State {
+        position: top_left,
+        cost: 0,
+    });
+    shortest_paths.insert(top_left, 0);
+
+    while let Some(current) = frontier.pop() {
+        if current.position == bottom_right {
+            return Some(current.cost);
+        }
+        if let Some(neighbours) = edges.get(&current.position) {
             neighbours.iter().for_each(|&n| {
-                let mut w = current_weight + *weights.get(&(current, n)).unwrap();
-                let entry = shortest_paths.entry(n).or_insert(w);
-                *entry = *entry.min(&mut w);
+                let next = State {
+                    position: n,
+                    cost: current.cost + *weights.get(&(current.position, n)).unwrap(),
+                };
+
+                if next.cost < *shortest_paths.get(&n).unwrap_or(&usize::MAX) {
+                    frontier.push(next);
+                    shortest_paths.insert(n, next.cost);
+                }
             });
         }
-
-        unvisited.remove(&current);
-
-        if !unvisited.contains(&destination) {
-            break;
-        }
-
-        current = **unvisited
-            .iter()
-            .min_by_key(|u| shortest_paths.get(u).unwrap_or(&usize::MAX))
-            .unwrap();
     }
 
-    *shortest_paths.get(&destination).unwrap()
+    None
 }
 
-fn part_2(_edges: &Edges, _weights: &Weights) -> usize {
-    0
-}
-
-fn parse_input(input: &str) -> (Edges, Weights) {
-    let nodes: HashMap<Position, usize> = input
+fn parse_nodes(input: &str) -> Nodes {
+    input
         .lines()
         .enumerate()
         .flat_map(|(y, line)| {
@@ -64,8 +87,10 @@ fn parse_input(input: &str) -> (Edges, Weights) {
                 .enumerate()
                 .map(move |(x, w)| ((x as isize, y as isize), w.to_digit(10).unwrap() as usize))
         })
-        .collect();
+        .collect()
+}
 
+fn edges_and_weights(nodes: &Nodes) -> (Edges, Weights) {
     nodes.iter().fold(
         (Edges::new(), Weights::new()),
         |(mut edges, mut weights), (&p, _)| {
@@ -81,11 +106,33 @@ fn parse_input(input: &str) -> (Edges, Weights) {
     )
 }
 
-pub fn solve() -> SolverResult {
-    let (edges, weights) = parse_input(&read_to_string("data/day_15.txt")?);
+fn expand(input: &Nodes) -> Nodes {
+    let (mx, my) = input.keys().max().unwrap();
+    let (mx, my) = (mx + 1, my + 1); // widths of the original chunk
 
-    println!("Part 1: {}", part_1(&edges, &weights));
-    println!("Part 2: {}", part_2(&edges, &weights));
+    input
+        .iter()
+        .flat_map(|((x, y), w)| {
+            iproduct!(0..=4isize, 0..=4isize).map(move |(xd, yd)| {
+                let mut new_w = w + (xd + yd) as usize;
+                if new_w >= 10 {
+                    new_w -= 9
+                }
+
+                ((x + (xd * mx), y + (yd * my)), new_w)
+            })
+        })
+        .collect()
+}
+
+pub fn solve() -> SolverResult {
+    let nodes = parse_nodes(&read_to_string("data/day_15.txt")?);
+
+    let (edges, weights) = edges_and_weights(&nodes);
+    println!("Part 1: {}", find_shortest_path(&edges, &weights).unwrap());
+
+    let (edges, weights) = edges_and_weights(&expand(&nodes));
+    println!("Part 2: {}", find_shortest_path(&edges, &weights).unwrap());
 
     Ok(())
 }
@@ -108,10 +155,17 @@ mod tests {
 
     #[test]
     fn part_1_examples() {
-        let (edges, weights) = parse_input(INPUT);
-        assert_eq!(part_1(&edges, &weights), 40);
+        let (edges, weights) = edges_and_weights(&parse_nodes(INPUT));
+        assert_eq!(find_shortest_path(&edges, &weights), Some(40));
     }
 
     #[test]
-    fn part_2_examples() {}
+    fn part_2_examples() {
+        let nodes = &parse_nodes(INPUT);
+        let expanded = &expand(nodes);
+        assert_eq!(nodes.len() * 25, expanded.len());
+
+        let (edges, weights) = edges_and_weights(expanded);
+        assert_eq!(find_shortest_path(&edges, &weights), Some(315));
+    }
 }
