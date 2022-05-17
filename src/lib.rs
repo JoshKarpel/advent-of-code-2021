@@ -1,7 +1,5 @@
 #![feature(array_windows)]
-#![feature(int_abs_diff)]
 #![feature(control_flow_enum)]
-#![feature(bool_to_option)]
 #![feature(binary_heap_drain_sorted)]
 
 #[macro_use]

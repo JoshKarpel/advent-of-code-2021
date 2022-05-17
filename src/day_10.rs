@@ -40,25 +40,25 @@ lazy_static! {
 
 fn parse(line: &str) -> Result<Vec<char>, char> {
     let mut stack = Vec::new();
-    let error = line.chars().find_map(|char| {
-        if OPEN.contains(&char) {
-            stack.push(char);
-            None
+    let error = line.chars().find(|char| {
+        if OPEN.contains(char) {
+            stack.push(*char);
+            false
         } else if let Some(&closer) = stack
             .last()
             .and_then(|last_open| OPEN_TO_CLOSE.get(last_open))
         {
-            if char == closer {
+            if char == &closer {
                 // right closer
                 stack.pop();
-                None
+                false
             } else {
                 // wrong closer
-                Some(char)
+                true
             }
         } else {
             // empty stack, or the character wasn't a closer
-            Some(char)
+            true
         }
     });
 
