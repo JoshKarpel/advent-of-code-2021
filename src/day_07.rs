@@ -10,7 +10,7 @@ fn part_1(positions: &[isize]) -> isize {
 
     if let MinMaxResult::MinMax(&min, &max) = pos.iter().minmax() {
         (min..=max)
-            .map(|p| (&pos).sub(&ones * p).mapv(isize::abs).sum())
+            .map(|p| pos.sub(&ones * p).mapv(isize::abs).sum())
             .min()
             .unwrap()
     } else {
